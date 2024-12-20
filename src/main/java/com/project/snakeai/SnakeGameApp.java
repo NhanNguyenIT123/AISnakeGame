@@ -1,11 +1,18 @@
 package com.project.snakeai;
 
-import javax.swing.*;
-import java.awt.*;
-import java.awt.event.*;
-import java.io.*;
-import java.util.ArrayList;
+import java.awt.BorderLayout;
+import java.awt.Font;
+import java.awt.GridLayout;
 import java.util.List;
+
+import javax.swing.JButton;
+import javax.swing.JFrame;
+import javax.swing.JLabel;
+import javax.swing.JPanel;
+import javax.swing.JScrollPane;
+import javax.swing.JTextArea;
+import javax.swing.JTextField;
+import javax.swing.SwingUtilities;
 
 public class SnakeGameApp {
     
@@ -127,6 +134,10 @@ class RecordPanel extends JPanel {
         JScrollPane scrollPane = new JScrollPane(recordArea);
         add(scrollPane, BorderLayout.CENTER);
 
+        JButton viewTopScoresButton = new JButton("View Top 10 Scores");
+        viewTopScoresButton.setFont(new Font("Arial", Font.PLAIN, 18));
+        viewTopScoresButton.addActionListener(e -> displayTopScores(recordArea));
+
         JButton backButton = new JButton("Back to Main Menu");
         backButton.setFont(new Font("Arial", Font.PLAIN, 24));
         backButton.addActionListener(e -> {
@@ -137,11 +148,12 @@ class RecordPanel extends JPanel {
         });
 
         add(backButton, BorderLayout.SOUTH);
+        add(viewTopScoresButton,BorderLayout.NORTH);
     }
 
     private void updateRecordArea(JTextArea recordArea) {
         StringBuilder sb = new StringBuilder();
-        sb.append("High Score: ").append(getHighScore()).append("\n\n");
+        sb.append("High Score: ").append(getHighScore()).append("\n").append("Press 'View Top 10 Scores' to see the leaderboard.\n");
         if (records.isEmpty()) {
             sb.append("No records available.\n");
         }
@@ -166,6 +178,22 @@ class RecordPanel extends JPanel {
             }
         }
         return highScore;
+    }
+
+    private void displayTopScores(JTextArea recordArea) {
+        List<Integer> topScores = RecordManager.getTopScores(); 
+        StringBuilder sb = new StringBuilder();
+
+        if (topScores.isEmpty()) {
+            sb.append("No records available.\n");
+        } else {
+            sb.append("Top 10 Scores:\n");
+            for (int i = 0; i < topScores.size(); i++) {
+                sb.append(i + 1).append(". Score = ").append(topScores.get(i)).append("\n");
+            }
+        }
+
+        recordArea.setText(sb.toString());
     }
 }
 

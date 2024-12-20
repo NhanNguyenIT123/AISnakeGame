@@ -1,11 +1,19 @@
 package com.project.snakeai;
 
-import java.io.*;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.PriorityQueue;
 
 public class RecordManager {
     private static final String FILE_PATH = "scores.txt";
+    private static final int MAX_TOP_SCORES = 10;
+    private static PriorityQueue<Integer> topScores = new PriorityQueue<>(MAX_TOP_SCORES);
 
     public static List<GameRecord> loadRecords() {
         List<GameRecord> records = new ArrayList<>();
@@ -22,7 +30,6 @@ public class RecordManager {
     public static void saveRecords(List<GameRecord> records) {
         try (ObjectOutputStream oos = new ObjectOutputStream(new FileOutputStream(FILE_PATH))) {
             oos.writeObject(records);
-            System.out.println("Saving records: " + records);
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -34,14 +41,30 @@ public class RecordManager {
         saveRecords(records);
     }
 
-    public static int getHighScore(List<GameRecord> records) {
-        int highScore = 0;
-        for (GameRecord record : records) {
-            for (TryRecord tryRecord : record.getTries()) {
-                highScore = Math.max(highScore, tryRecord.getScore());
-                System.out.println(highScore+" "+tryRecord.getScore());
-            }
+    public static void addScoreToHeap(int score) {
+        if (topScores.size() < MAX_TOP_SCORES) {
+            topScores.add(score);
+        } else if (score > topScores.peek()) {
+            topScores.poll();
+            topScores.add(score); 
         }
-        return highScore;
     }
+
+    public static List<Integer> getTopScores() {
+        List<Integer> sortedScores = new ArrayList<>(topScores);
+        for (int i = 0; i < sortedScores.size(); i++) {
+            int maxIndex = i; 
+            for (int j = i + 1; j < sortedScores.size(); j++) {
+                if (sortedScores.get(j) > sortedScores.get(maxIndex)) {
+                    maxIndex = j; 
+                }
+            }
+            int temp = sortedScores.get(i);
+            sortedScores.set(i, sortedScores.get(maxIndex));
+            sortedScores.set(maxIndex, temp);
+        }
+        return sortedScores;
+    }
+
+
 }  

@@ -1,11 +1,29 @@
 package com.project.snakeai;
 
-import javax.swing.*;
-import java.awt.*;
-import java.awt.event.*;
-import java.util.*;
-import javax.swing.Timer;
+import java.awt.Color;
+import java.awt.Dimension;
+import java.awt.Font;
+import java.awt.FontMetrics;
+import java.awt.Graphics;
+import java.awt.Point;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
+import java.awt.event.KeyAdapter;
+import java.awt.event.KeyEvent;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.LinkedList;
 import java.util.List;
+import java.util.Map;
+import java.util.PriorityQueue;
+import java.util.Queue;
+import java.util.Random;
+import java.util.Set;
+
+import javax.swing.JFrame;
+import javax.swing.JPanel;
+import javax.swing.Timer;
 
 public class SnakeGameAI extends JPanel implements ActionListener {
     public static final int TILE_SIZE = 20;
@@ -20,6 +38,8 @@ public class SnakeGameAI extends JPanel implements ActionListener {
     private Timer timer;
     private int score = 0;
     private int randomMoveCounter = 0;
+    private PriorityQueue<Obstacle> obstacleQueue = new PriorityQueue<>();
+    private List<Point> obstacles = new ArrayList<>();
     private GameRecord gameRecord;
     private List<GameRecord> records; 
 
@@ -74,7 +94,8 @@ public class SnakeGameAI extends JPanel implements ActionListener {
 
     private void saveScore() {
         gameRecord.addTry(new TryRecord(score)); 
-        RecordManager.saveRecords(records); 
+        RecordManager.saveRecords(records);
+        RecordManager.addScoreToHeap(score);
     }
 
     private void spawnFood() {
@@ -178,6 +199,11 @@ public class SnakeGameAI extends JPanel implements ActionListener {
             } else {
                 moveSnake();
             }
+            if (score % 50 == 0) { 
+                generateObstacles();
+            }
+    
+            spawnObstacle();
         }
         repaint();
     }
@@ -193,6 +219,11 @@ public class SnakeGameAI extends JPanel implements ActionListener {
             g.setColor(Color.GREEN);
             for (Point p : snake) {
                 g.fillRect(p.x * TILE_SIZE, p.y * TILE_SIZE, TILE_SIZE, TILE_SIZE);
+            }
+
+            g.setColor(Color.GRAY);
+            for (Point obstacle : obstacles) {
+                g.fillRect(obstacle.x * TILE_SIZE, obstacle.y * TILE_SIZE, TILE_SIZE, TILE_SIZE);
             }
 
             g.setColor(Color.WHITE);
@@ -246,6 +277,81 @@ public class SnakeGameAI extends JPanel implements ActionListener {
     private boolean isSafeMove(Point p, Set<Point> body) {
         return p.x >= 0 && p.y >= 0 && p.x < gridWidth && p.y < gridHeight && !body.contains(p);
     }
+
+    private boolean isObstacle(Point p) {
+        return obstacles.contains(p);
+    }
+
+    private int heuristic(Point start, Point end) {
+        return Math.abs(start.x - end.x) + Math.abs(start.y - end.y);
+    }
+
+    private void spawnObstacle() {
+        if (!obstacleQueue.isEmpty()) {
+            Obstacle nextObstacle = obstacleQueue.poll();
+            Point position = nextObstacle.getPosition();
+
+            if (pathExists(snake.getFirst(), food)) {
+                obstacles.add(position);
+            }
+        }
+    }
+
+    private void generateObstacles() {
+        Random random = new Random();
+        Point snakeHead = snake.getFirst();
+    
+        for (int i = 0; i < 5; i++) { 
+            Point randomPoint;
+            do {
+                int x = random.nextInt(gridWidth);
+                int y = random.nextInt(gridHeight);
+                randomPoint = new Point(x, y);
+            } while (snake.contains(randomPoint) || food.equals(randomPoint) || isObstacle(randomPoint));
+    
+            int priority = Math.abs(randomPoint.x - snakeHead.x) + Math.abs(randomPoint.y - snakeHead.y); 
+            obstacleQueue.add(new Obstacle(randomPoint, priority));
+        }
+    }
+
+    private boolean pathExists(Point start, Point end) {
+        if (start.equals(end)) return true;
+    
+        PriorityQueue<AStarNode> openSet = new PriorityQueue<>();
+        Set<Point> closedSet = new HashSet<>();
+        Map<Point, Integer> gScore = new HashMap<>();
+    
+        openSet.add(new AStarNode(start, 0, heuristic(start, end)));
+        gScore.put(start, 0);
+    
+        while (!openSet.isEmpty()) {
+            AStarNode currentNode = openSet.poll();
+            Point current = currentNode.getPoint();
+    
+            if (current.equals(end)) {
+                return true; 
+            }
+    
+            closedSet.add(current);
+    
+            for (Point neighbor : getNeighbors(current)) {
+                if (closedSet.contains(neighbor) || snake.contains(neighbor) || isObstacle(neighbor)) {
+                    continue; 
+                }
+    
+                int tentativeGScore = gScore.getOrDefault(current, Integer.MAX_VALUE) + 1;
+    
+                if (tentativeGScore < gScore.getOrDefault(neighbor, Integer.MAX_VALUE)) {
+                    gScore.put(neighbor, tentativeGScore);
+                    int fScore = tentativeGScore + heuristic(neighbor, end);
+                    openSet.add(new AStarNode(neighbor, tentativeGScore, fScore));
+                }
+            }
+        }
+    
+        return false; 
+    }
+    
 
 
 }
