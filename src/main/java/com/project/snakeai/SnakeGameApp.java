@@ -82,10 +82,10 @@ class PlayOptionsPanel extends JPanel {
         optionsPanel.setLayout(new GridLayout(3, 2, 10, 10));
 
         JLabel widthLabel = new JLabel("Width:");
-        JTextField widthField = new JTextField("30");
+        JTextField widthField = new JTextField("40");
 
         JLabel heightLabel = new JLabel("Height:");
-        JTextField heightField = new JTextField("20");
+        JTextField heightField = new JTextField("30");
 
         JButton startButton = new JButton("Start Game");
         startButton.setFont(new Font("Arial", Font.PLAIN, 24));

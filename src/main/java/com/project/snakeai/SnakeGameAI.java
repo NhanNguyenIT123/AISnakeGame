@@ -25,9 +25,6 @@ import javax.swing.JFrame;
 import javax.swing.JPanel;
 import javax.swing.Timer;
 
-import com.project.snakeai.Obstacle;
-import com.project.snakeai.AStarNode;
-
 public class SnakeGameAI extends JPanel implements ActionListener {
     public static final int TILE_SIZE = 20;
     private static final int GAME_SPEED = 100;
@@ -41,6 +38,7 @@ public class SnakeGameAI extends JPanel implements ActionListener {
     private Timer timer;
     private int score = 0;
     private int randomMoveCounter = 0;
+    private int obstacleRemovalCounter = 0;
     private PriorityQueue<Obstacle> obstacleQueue = new PriorityQueue<>();
     private List<Point> obstacles = new ArrayList<>();
     private GameRecord gameRecord;
@@ -92,6 +90,7 @@ public class SnakeGameAI extends JPanel implements ActionListener {
     private void restartGame() {
         saveScore();
         initGame();
+        obstacles.clear();
         repaint();
     }
 
@@ -122,7 +121,7 @@ public class SnakeGameAI extends JPanel implements ActionListener {
             default: throw new IllegalStateException("Unexpected direction: " + direction);
         }
 
-        if (nextHead.x < 0 || nextHead.y < 0 || nextHead.x >= gridWidth || nextHead.y >= gridHeight || snake.contains(nextHead)) {
+        if (nextHead.x < 0 || nextHead.y < 0 || nextHead.x >= gridWidth || nextHead.y >= gridHeight || snake.contains(nextHead) || isObstacle(nextHead)) {
             running = false;
             timer.stop();
             saveScore();
@@ -161,6 +160,9 @@ public class SnakeGameAI extends JPanel implements ActionListener {
 
                 if (path.size() > 1) {
                     Point nextStep = path.get(1);
+                    if (isObstacle(nextStep)) {
+                        return false; 
+                    }
                     if (nextStep.x > start.x) direction = 'R';
                     else if (nextStep.x < start.x) direction = 'L';
                     else if (nextStep.y > start.y) direction = 'D';
@@ -197,16 +199,23 @@ public class SnakeGameAI extends JPanel implements ActionListener {
                 if (randomMoveCounter % 5 == 0) {
                     bfsFindPath();
                 }
-                moveRandomlyAvoidingBody();
+                moveRandomly();
                 randomMoveCounter++;
             } else {
                 moveSnake();
             }
-            if (score % 50 == 0) { 
+            if (score % 100 == 0 && score > 0) { 
                 generateObstacles();
             }
     
             spawnObstacle();
+            obstacleRemovalCounter++;
+            if (obstacleRemovalCounter >= 10) { 
+                for (int i = 0; i < 2 ; i++){
+                    removeObstacle();
+                }
+                obstacleRemovalCounter = 0; 
+            }
         }
         repaint();
     }
@@ -256,37 +265,12 @@ public class SnakeGameAI extends JPanel implements ActionListener {
         parentFrame.repaint();
     }
     
-    private void moveRandomlyAvoidingBody() {
-        Point head = snake.getFirst();
-        List<Character> possibleDirections = new ArrayList<>();
-
-        Set<Point> body = new HashSet<>(snake);
-
-        if (isSafeMove(new Point(head.x, head.y - 1), body)) possibleDirections.add('U'); 
-        if (isSafeMove(new Point(head.x, head.y + 1), body)) possibleDirections.add('D'); 
-        if (isSafeMove(new Point(head.x - 1, head.y), body)) possibleDirections.add('L'); 
-        if (isSafeMove(new Point(head.x + 1, head.y), body)) possibleDirections.add('R'); 
-
-        if (!possibleDirections.isEmpty()) {
-            Random random = new Random();
-            direction = possibleDirections.get(random.nextInt(possibleDirections.size()));
-            moveSnake();
-        } else {
-            running = false;
-            saveScore();
-        }
-    }
-    
     private boolean isSafeMove(Point p, Set<Point> body) {
-        return p.x >= 0 && p.y >= 0 && p.x < gridWidth && p.y < gridHeight && !body.contains(p);
+        return p.x >= 0 && p.y >= 0 && p.x < gridWidth && p.y < gridHeight && !body.contains(p) && !isObstacle(p);
     }
 
     private boolean isObstacle(Point p) {
         return obstacles.contains(p);
-    }
-
-    private int heuristic(Point start, Point end) {
-        return Math.abs(start.x - end.x) + Math.abs(start.y - end.y);
     }
 
     private void spawnObstacle() {
@@ -294,7 +278,7 @@ public class SnakeGameAI extends JPanel implements ActionListener {
             Obstacle nextObstacle = obstacleQueue.poll();
             Point position = nextObstacle.getPosition();
 
-            if (pathExists(snake.getFirst(), food)) {
+            if (!snake.contains(position) && !food.equals(position) && !isObstacle(position)) {
                 obstacles.add(position);
             }
         }
@@ -304,7 +288,7 @@ public class SnakeGameAI extends JPanel implements ActionListener {
         Random random = new Random();
         Point snakeHead = snake.getFirst();
     
-        for (int i = 0; i < 5; i++) { 
+        for (int i = 0; i < 1; i++) { 
             Point randomPoint;
             do {
                 int x = random.nextInt(gridWidth);
@@ -317,44 +301,30 @@ public class SnakeGameAI extends JPanel implements ActionListener {
         }
     }
 
-    private boolean pathExists(Point start, Point end) {
-        if (start.equals(end)) return true;
-    
-        PriorityQueue<AStarNode> openSet = new PriorityQueue<>();
-        Set<Point> closedSet = new HashSet<>();
-        Map<Point, Integer> gScore = new HashMap<>();
-    
-        openSet.add(new AStarNode(start, 0, heuristic(start, end)));
-        gScore.put(start, 0);
-    
-        while (!openSet.isEmpty()) {
-            AStarNode currentNode = openSet.poll();
-            Point current = currentNode.getPoint();
-    
-            if (current.equals(end)) {
-                return true; 
-            }
-    
-            closedSet.add(current);
-    
-            for (Point neighbor : getNeighbors(current)) {
-                if (closedSet.contains(neighbor) || snake.contains(neighbor) || isObstacle(neighbor)) {
-                    continue; 
-                }
-    
-                int tentativeGScore = gScore.getOrDefault(current, Integer.MAX_VALUE) + 1;
-    
-                if (tentativeGScore < gScore.getOrDefault(neighbor, Integer.MAX_VALUE)) {
-                    gScore.put(neighbor, tentativeGScore);
-                    int fScore = tentativeGScore + heuristic(neighbor, end);
-                    openSet.add(new AStarNode(neighbor, tentativeGScore, fScore));
-                }
-            }
+    private void removeObstacle() {
+        if (!obstacles.isEmpty()) {
+            obstacles.remove(0); 
         }
-    
-        return false; 
     }
+
+    private void moveRandomly() {
+        Point head = snake.getFirst();
+        List<Character> possibleDirections = new ArrayList<>();
     
-
-
+        Set<Point> body = new HashSet<>(snake);   
+        
+        if (isSafeMove(new Point(head.x, head.y - 1), body)) possibleDirections.add('U'); 
+        if (isSafeMove(new Point(head.x, head.y + 1), body)) possibleDirections.add('D');
+        if (isSafeMove(new Point(head.x - 1, head.y), body)) possibleDirections.add('L'); 
+        if (isSafeMove(new Point(head.x + 1, head.y), body)) possibleDirections.add('R'); 
+    
+        if (!possibleDirections.isEmpty()) {
+            Random random = new Random();
+            direction = possibleDirections.get(random.nextInt(possibleDirections.size()));
+            moveSnake();
+        } else {
+            running = false;
+            saveScore();
+        }
+    }
 }
