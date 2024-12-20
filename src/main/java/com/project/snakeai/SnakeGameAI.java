@@ -25,6 +25,9 @@ import javax.swing.JFrame;
 import javax.swing.JPanel;
 import javax.swing.Timer;
 
+import com.project.snakeai.Obstacle;
+import com.project.snakeai.AStarNode;
+
 public class SnakeGameAI extends JPanel implements ActionListener {
     public static final int TILE_SIZE = 20;
     private static final int GAME_SPEED = 100;
