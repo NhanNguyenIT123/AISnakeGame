@@ -64,19 +64,36 @@ public class RecordManager {
     }
 
     public static List<Integer> getTopScores() {
-        List<Integer> sortedScores = getScoresFromRecords();
-        for (int i = 0; i < sortedScores.size(); i++) {
-            int maxIndex = i; 
-            for (int j = i + 1; j < sortedScores.size(); j++) {
-                if (sortedScores.get(j) > sortedScores.get(maxIndex)) {
-                    maxIndex = j; 
-                }
-            }
-            int temp = sortedScores.get(i);
-            sortedScores.set(i, sortedScores.get(maxIndex));
-            sortedScores.set(maxIndex, temp);
+        List<Integer> scores = getScoresFromRecords();
+        quickSort(scores, 0, scores.size() - 1);
+        return scores;
+    }
+
+    private static void quickSort(List<Integer> scores, int low, int high) {
+        if (low < high) {
+            int pivotIndex = partition(scores, low, high);
+            quickSort(scores, low, pivotIndex - 1);
+            quickSort(scores, pivotIndex + 1, high);
         }
-        return sortedScores;
+    }
+    
+    private static int partition(List<Integer> scores, int low, int high) {
+        int pivot = scores.get(high); 
+        int i = low - 1;
+    
+        for (int j = low; j < high; j++) {
+            if (scores.get(j) > pivot) { 
+                i++;
+                int temp = scores.get(i);
+                scores.set(i, scores.get(j));
+                scores.set(j, temp);
+            }
+        }
+        int temp = scores.get(i + 1);
+        scores.set(i + 1, scores.get(high));
+        scores.set(high, temp);
+    
+        return i + 1;
     }
 
 
