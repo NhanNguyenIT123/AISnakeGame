@@ -41,6 +41,19 @@ public class RecordManager {
         saveRecords(records);
     }
 
+    public static List<Integer> getScoresFromRecords() {
+        List<GameRecord> records = loadRecords();
+        List<Integer> scores = new ArrayList<>();
+
+        for (GameRecord record : records) {
+            for (TryRecord tryRecord : record.getTries()) {
+                scores.add(tryRecord.getScore());
+            }
+        }
+
+        return scores;
+    }
+
     public static void addScoreToHeap(int score) {
         if (topScores.size() < MAX_TOP_SCORES) {
             topScores.add(score);
@@ -51,7 +64,7 @@ public class RecordManager {
     }
 
     public static List<Integer> getTopScores() {
-        List<Integer> sortedScores = new ArrayList<>(topScores);
+        List<Integer> sortedScores = getScoresFromRecords();
         for (int i = 0; i < sortedScores.size(); i++) {
             int maxIndex = i; 
             for (int j = i + 1; j < sortedScores.size(); j++) {
